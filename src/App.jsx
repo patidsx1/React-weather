@@ -1,77 +1,82 @@
+import { useState,useEffect } from 'react'
+import './index.css'
+import ListComponent from './list'
 
-import { useEffect, useState } from 'react';
-import cold from './assets/cold.jpg'
-import hot from './assets/hot.jpg'
-import  Description from './components/description';
-import { getWeatherData } from "./weatherserivce";
-function App() {
-  const [city,setcity]=useState('Paris')
-  const[weather,setweather]=useState(null)
-const [unit ,setunit]=useState('metric')
-const[bg,setbg]=useState(hot)
-  useEffect(()=>{
+ function Square(props) {
+  const [nextplayer,setnextplayer]=useState('X')
+  const [usedbyX,setusedbyX]=useState([])
+  const [usedbyO,setusedbyO]=useState([])
+  const [gameStatus,setgameStatus]=useState('active')
+  const [winner,setwinner]=useState('')
+  const arr= Array.from({length:9},(_,indx)=>indx+1)
+  const winningCombination=[[1,2,3],[4,5,6],[7,8,9],[1,4,7],[2,5,8],[3,6,9],[3,5,7],[1,5,9]]
 
-    const getapidata=async ()=>{
-    const data=  await  getWeatherData(city,unit)
-    setweather(data)
-    const threshold=unit==='metric'?20:60;
-    data.temp.toFixed() >=threshold?setbg(hot):setbg(cold)
-    }
-    getapidata()
- 
-  },[unit,city])
 
-  const alterUnit = (e)=>{
+  const squareSelected =(key)=>{
+    if(usedbyO.concat(usedbyX).includes(key) || gameStatus==='won') 
+      return;
 
-    e.target.innerText ==='F' ? (e.target.innerText ='C') : (e.target.innerText ='F') ;
-    e.target.innerText ==='F' ?  setunit('metric'):setunit('imperial') ;
-  }
-
-  const handleClick= (e)=>{
-
-  if(e.keyCode===13)
-    {
-
-    setcity(e.target.value)
-      e.target.blur()
-    }
+    nextplayer==='X' ? setusedbyX([...usedbyX,key]) :  setusedbyO([...usedbyO,key])
+    nextplayer==='X' ? setnextplayer('O'):setnextplayer('X')
 
   }
 
+  useEffect(() => {
+    if (usedbyO.concat(usedbyX).length >= 5) {
+      checkGameStatus();
+    }
+  }, [nextplayer]);
 
-  return(<div className="app" style={{ backgroundImage: `url(${bg})` }}>
-    <div className="overlay">
-    {weather &&
-        <div className="container">
-        <div className="section section__inputs">
-          <input    
-            type="text"
-            name="city"
-            placeholder="Enter City..."
-            onKeyUp={handleClick}
-       
-          />
-        <button onClick={alterUnit}>F</button>
+  const checkGameStatus=()=>{
+    let arr;
+    nextplayer ==='X' ? arr=usedbyO : arr=usedbyX;
+
+     for(let i=0;i<winningCombination.length;i++){  
+      let won=true;
+      for(let k=0;k<=2;k++)
+      {     
+        if(!arr.includes(winningCombination[i][k]))
+            won=false;       
+      }
+      if(won)
+      {
+          setgameStatus('won')
+          nextplayer==='X' ?setwinner('O'):setwinner('X')
+          break;
+      }
+
+     }
+    
+  }
+
+  const squareFunc=()=>{
+    props.playAgain()
+  }
+
+
+
+  return (
+  <>
+      <p style={{margin:0}}>{ gameStatus==='won' ? `Winner : ${winner}`:   `Next Player : ${nextplayer}` } </p>
+      <div className='flex'>
+        <div  className='main'>
+          {
+            arr.map(Key=>  <button key={Key} onClick={()=>squareSelected(Key)}  className="square">{usedbyX.includes(Key) ? 'X':usedbyO.includes(Key)?'O':''}</button>)
+          }
+        </div> 
+        <div>
+          <ListComponent callParentFunc={squareFunc}/>
         </div>
-        
-        <div className="section section__temperature">  
-         <div className="icon">
-          <h3>{`${weather.name},${weather.country}`}</h3>
-          <img src={weather.iconURL} alt="" />
-          <h3>{weather.description}</h3>
-         </div>
-        <div className="temperature">
-          <h1>{`${weather.temp.toFixed()}\u00b0` +(unit ==='metric'? 'C':'F')}</h1>
-        </div>
-        </div>  
-        <Description united={unit} weathered={weather} /> 
       </div>
-    }
-  
-      
-    </div>
-  </div>)
-  
+  </>
+  )
 }
 
-export default App;
+
+const ParentFunc =()=>{
+  const[index,setindex]=useState(1)
+   return  <Square key={index}  playAgain={()=>setindex(index+1)} />
+  }
+
+
+  export default ParentFunc;
